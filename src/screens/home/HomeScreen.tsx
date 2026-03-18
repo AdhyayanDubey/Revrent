@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Animated, ScrollView, SafeAreaView, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Animated, ScrollView, SafeAreaView, Dimensions, Platform, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
@@ -131,6 +131,7 @@ const VehicleCard = ({ vehicle, isDarkMode }: { vehicle: Vehicle, isDarkMode: bo
 };
 
 export default function HomeScreen() {
+  const navigation = useNavigation<any>();
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const themeColors = isDarkMode ? colors.background.dark : '#F9FAFB';
   const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
@@ -138,6 +139,8 @@ export default function HomeScreen() {
   
   const [activeCategory, setActiveCategory] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [showFilterModal, setShowFilterModal] = React.useState(false);
+  const [showNotificationModal, setShowNotificationModal] = React.useState(false);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors }]}>
@@ -154,7 +157,7 @@ export default function HomeScreen() {
             <Text style={[styles.userNameText, { color: textColor }]}>Adhyayan Dubey</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
+        <TouchableOpacity style={styles.notificationBtn} onPress={() => setShowNotificationModal(true)}>
           <Ionicons name="notifications-outline" size={24} color={textColor} />
         </TouchableOpacity>
       </View>
@@ -170,7 +173,7 @@ export default function HomeScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <TouchableOpacity style={styles.filterBtn}>
+          <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilterModal(true)}>
             <Ionicons name="options-outline" size={20} color={textColor} />
           </TouchableOpacity>
         </View>
@@ -219,19 +222,78 @@ export default function HomeScreen() {
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: themeColors, borderTopColor: isDarkMode ? '#374151' : '#F3F4F6' }]}>
-        <TouchableOpacity style={styles.navItem} onPress={() => {}}>
-          <Ionicons name="home" size={24} color={textColor} />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => {}}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Saved')}>
           <Ionicons name="heart-outline" size={24} color="#9CA3AF" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => {}}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Map')}>
           <Ionicons name="map-outline" size={24} color="#9CA3AF" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => {}}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <Ionicons name="person-outline" size={24} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
+
+      {/* Notifications Modal */}
+      <Modal visible={showNotificationModal} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDarkMode ? colors.card.dark : '#FFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Notifications</Text>
+              <TouchableOpacity onPress={() => setShowNotificationModal(false)}>
+                <Ionicons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.notificationEmpty}>
+              <Ionicons name="notifications-off-outline" size={48} color={secondaryTextColor} />
+              <Text style={[styles.notificationEmptyText, { color: textColor }]}>No new notifications.</Text>
+              <Text style={[styles.notificationEmptySubText, { color: secondaryTextColor }]}>You will see real-time updates here soon.</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter/Sort Modal */}
+      <Modal visible={showFilterModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDarkMode ? colors.card.dark : '#FFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Filter & Sort</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterLabel, { color: textColor }]}>Sort By</Text>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: colors.primary }}>Price: Low to High</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: textColor }}>Price: High to Low</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: textColor }}>Rating: Highest First</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterLabel, { color: textColor }]}>Vehicle Type</Text>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: colors.primary }}>Any Type</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: textColor }}>Electric Scooter</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterOption}>
+                <Text style={{ color: textColor }}>Electric Bike</Text>
+              </TouchableOpacity>
+            </View>
+            <Button title="Apply Filters" onPress={() => setShowFilterModal(false)} />
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -439,18 +501,65 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: Platform.OS === 'ios' ? 84 : 64,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     borderTopWidth: 1,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   navItem: {
-    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  filterOption: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  notificationEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  notificationEmptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  notificationEmptySubText: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  }
 });

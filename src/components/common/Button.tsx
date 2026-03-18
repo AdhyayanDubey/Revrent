@@ -8,6 +8,7 @@ import {
   ViewStyle,
   TextStyle,
   Animated,
+  StyleProp,
 } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -19,8 +20,8 @@ interface ButtonProps {
   size?: 'small' | 'medium' | 'large';
   isLoading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   icon?: React.ReactNode;
 }
 
@@ -60,7 +61,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (disabled) return colors.text.secondaryLight;
     switch (variant) {
       case 'primary':
-        return colors.primary;
+        return '#1D4ED8'; // Hardcoded fix to force strictly blue instead of whatever colors.primary mapped to (which seems to be red)
       case 'secondary':
         return colors.secondary;
       case 'outline':
@@ -76,7 +77,7 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
       case 'secondary':
-        return colors.text.primaryDark;
+        return '#FFFFFF'; // Explicit white text
       case 'outline':
       case 'text':
         return colors.primary;
@@ -97,9 +98,9 @@ export const Button: React.FC<ButtonProps> = ({
       case 'small':
         return { paddingVertical: spacing.s, paddingHorizontal: spacing.m };
       case 'medium':
-        return { paddingVertical: spacing.m, paddingHorizontal: spacing.l };
+        return { paddingVertical: 14, paddingHorizontal: spacing.l }; // Increased vertical padding for better text visibility
       case 'large':
-        return { paddingVertical: spacing.l, paddingHorizontal: spacing.xl };
+        return { paddingVertical: 18, paddingHorizontal: spacing.xl }; // Increased vertical padding for better text visibility
       default:
         return { paddingVertical: spacing.m, paddingHorizontal: spacing.l };
     }
@@ -108,6 +109,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
       <TouchableOpacity
+        activeOpacity={0.8}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
@@ -120,6 +122,7 @@ export const Button: React.FC<ButtonProps> = ({
             borderWidth: variant === 'outline' ? 1 : 0,
             ...getPadding(),
           },
+          style,
         ]}
       >
         {isLoading ? (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Button } from '../../components/common/Button';
 import { useAppStore } from '../../store';
@@ -97,26 +98,24 @@ export default function SignUpScreen() {
 
         <View style={styles.socialAuthContainer}>
           <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : colors.border.light }]} />
-            <Text style={[styles.dividerText, { color: secondaryTextColor }]}>Or continue with</Text>
-            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : colors.border.light }]} />
+            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
+            <Text style={[styles.dividerText, { color: secondaryTextColor }]}>or continue with</Text>
+            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
           </View>
 
           <View style={styles.socialButtons}>
-            <Button
-              title="Google"
-              variant="outline"
-              style={styles.socialButton}
-              textStyle={{ color: textColor }}
-              onPress={() => handleSignUp()}
-            />
-            <Button
-              title="Apple"
-              variant="outline"
-              style={styles.socialButton}
-              textStyle={{ color: textColor }}
-              onPress={() => handleSignUp()}
-            />
+            <TouchableOpacity style={[styles.socialButton, { borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }]} onPress={handleSignUp}>
+              <Image 
+                source={{ uri: 'https://img.icons8.com/?size=100&id=17949&format=png&color=000000' }} 
+                style={styles.socialIcon} 
+                resizeMode="contain"
+              />
+              <Text style={styles.socialButtonText}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.socialButton, { borderColor: '#111827', backgroundColor: '#111827' }]} onPress={handleSignUp}>
+              <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+              <Text style={[styles.socialButtonText, { color: '#FFFFFF' }]}>Apple</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -185,10 +184,26 @@ const styles = StyleSheet.create({
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing.m,
+    width: '100%',
   },
   socialButton: {
-    flex: 1,
+    width: '47%',
+    flexDirection: 'row',
+    height: 52,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialIcon: {
+    width: 20,
+    height: 20,
+  },
+  socialButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 8,
   },
   footer: {
     flexDirection: 'row',

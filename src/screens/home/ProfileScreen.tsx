@@ -1,0 +1,213 @@
+import React from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../theme';
+import { useAppStore } from '../../store';
+
+export default function ProfileScreen({ navigation }: any) {
+  const isDarkMode = useAppStore(state => state.isDarkMode);
+  const toggleDarkMode = useAppStore(state => state.toggleDarkMode);
+  const user = useAppStore(state => state.user);
+  const setUser = useAppStore(state => state.setUser);
+
+  const themeColors = isDarkMode ? colors.background.dark : '#F9FAFB';
+  const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
+  const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
+  const cardColor = isDarkMode ? colors.card.dark : '#FFFFFF';
+
+  const handleLogout = () => {
+    setUser(null);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Auth' }],
+    });
+  };
+
+  const menuItems = [
+    { title: 'Personal Information', icon: 'person-outline', onPress: () => {} },
+    { title: 'Payment Methods', icon: 'card-outline', onPress: () => {} },
+    { title: 'Rental History', icon: 'time-outline', onPress: () => {} },
+    { title: 'Notifications', icon: 'notifications-outline', onPress: () => {} },
+    { title: 'Help & Support', icon: 'help-circle-outline', onPress: () => {} },
+    { title: 'Dark Mode', icon: 'moon-outline', rightContent: <Switch trackColor={{ false: "#D1D5DB", true: colors.primary }} thumbColor={"#FFFFFF"} ios_backgroundColor="#D1D5DB" onValueChange={toggleDarkMode} value={isDarkMode} /> }
+  ];
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors }]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
+        </View>
+
+        <View style={[styles.profileCard, { backgroundColor: cardColor }]}>
+          <Image source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileAvatar} />
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: textColor }]}>{user?.name || 'Jane Doe'}</Text>
+            <Text style={[styles.profileEmail, { color: secondaryTextColor }]}>{user?.email || 'jane.doe@example.com'}</Text>
+            <TouchableOpacity style={styles.editProfileBtn}>
+              <Text style={styles.editProfileText}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+            <Text style={[styles.statValue, { color: textColor }]}>12</Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rentals</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+            <Text style={[styles.statValue, { color: textColor }]}>$450</Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Spent</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+            <Text style={[styles.statValue, { color: textColor }]}>4.9</Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rating</Text>
+          </View>
+        </View>
+
+        <View style={styles.menuContainer}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity key={index} style={[styles.menuItem, { backgroundColor: cardColor, borderBottomColor: isDarkMode ? '#374151' : '#F3F4F6' }]} onPress={item.onPress} disabled={!!item.rightContent}>
+              <View style={styles.menuItemLeft}>
+                <Ionicons name={item.icon as any} size={24} color={secondaryTextColor} />
+                <Text style={[styles.menuItemTitle, { color: textColor }]}>{item.title}</Text>
+              </View>
+              {item.rightContent || <Ionicons name="chevron-forward" size={20} color={secondaryTextColor} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#1D4ED8" />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    padding: 20,
+    paddingTop: 40,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  profileCard: {
+    flexDirection: 'row',
+    padding: 20,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 20,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  editProfileBtn: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  editProfileText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  statBox: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginHorizontal: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+  },
+  menuContainer: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuItemTitle: {
+    fontSize: 16,
+    marginLeft: 16,
+    fontWeight: '500',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginBottom: 40,
+    marginHorizontal: 20,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+  },
+  logoutText: {
+    color: '#1D4ED8',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  }
+});

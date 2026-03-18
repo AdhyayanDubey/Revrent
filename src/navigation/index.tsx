@@ -15,6 +15,9 @@ import ConfirmationScreen from '../screens/booking/ConfirmationScreen';
 import FeedbackScreen from '../screens/booking/FeedbackScreen';
 import CompareScreen from '../screens/vehicle/CompareScreen';
 import VendorDashboardScreen from '../screens/vendor/DashboardScreen';
+import MapScreen from '../screens/home/MapScreen';
+import SavedScreen from '../screens/home/SavedScreen';
+import ProfileScreen from '../screens/home/ProfileScreen';
 
 const RootStack = createNativeStackNavigator();
 
@@ -33,6 +36,9 @@ export default function RootNavigation() {
 
         {/* Home Flow */}
         <RootStack.Screen name="Home" component={HomeScreen} />
+        <RootStack.Screen name="Map" component={MapScreen} />
+        <RootStack.Screen name="Saved" component={SavedScreen} />
+        <RootStack.Screen name="Profile" component={ProfileScreen} />
         <RootStack.Screen name="Details" component={DetailsScreen} />
         <RootStack.Screen name="Compare" component={CompareScreen} />
 

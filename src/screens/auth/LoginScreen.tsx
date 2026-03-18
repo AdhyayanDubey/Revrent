@@ -31,7 +31,11 @@ export default function LoginScreen() {
           {/* Header Graphic matching screenshot */}
           <View style={styles.heroBackground}>
             <View style={styles.heroIconContainer}>
-              <Ionicons name="bicycle-outline" size={48} color="#1D4ED8" style={styles.heroIcon} />
+              <Image 
+                source={{ uri: 'https://img.icons8.com/?size=100&id=lwnFajdemOCN&format=png&color=000000' }} 
+                style={{ width: 64, height: 64, tintColor: '#1D4ED8' }} 
+                resizeMode="contain"
+              />
             </View>
           </View>
 
@@ -74,7 +78,11 @@ export default function LoginScreen() {
 
               <View style={styles.socialButtons}>
                 <TouchableOpacity style={[styles.socialButton, { borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }]} onPress={handleLogin}>
-                  <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg' }} style={styles.socialIcon} />
+                  <Image 
+                    source={{ uri: 'https://img.icons8.com/?size=100&id=17949&format=png&color=000000' }} 
+                    style={styles.socialIcon} 
+                    resizeMode="contain"
+                  />
                   <Text style={styles.socialButtonText}>Google</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.socialButton, { borderColor: '#111827', backgroundColor: '#111827' }]} onPress={handleLogin}>
@@ -182,9 +190,8 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: '#1D4ED8',
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
+    borderRadius: 8,
+    marginTop: 8,
   },
   socialAuthContainer: {
     marginBottom: 32,
@@ -205,10 +212,10 @@ const styles = StyleSheet.create({
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    width: '100%',
   },
   socialButton: {
-    flex: 1,
+    width: '47%',
     flexDirection: 'row',
     height: 52,
     borderWidth: 1,
@@ -219,7 +226,6 @@ const styles = StyleSheet.create({
   socialIcon: {
     width: 20,
     height: 20,
-    marginRight: 8,
   },
   socialButtonText: {
     fontSize: 15,
