@@ -10,40 +10,55 @@ import { Button } from '../../components/common/Button';
 
 const { width } = Dimensions.get('window');
 
-// Mock data for the second vehicle to compare if only one is passed
-const mockVehicle1: Vehicle = {
-  id: 'v1',
-  name: 'Vespa Elettrica',
-  type: 'SCOOTER CLASS',
-  rating: 4.7,
-  tags: ['AVAILABLE'],
-  pricePerHour: 350,
-  imageUrl: 'https://via.placeholder.com/300x200.png?text=Vespa',
-  speed: '70',
-  range: '100',
-  chargeTime: '4 hrs',
-  batteryStatus: 95,
-  location: '0,0'
-};
-
-const mockVehicle2: Vehicle = {
-  id: 'v2',
-  name: 'Revolt RV400',
-  type: 'BIKE CLASS',
-  rating: 4.5,
-  tags: [],
-  pricePerHour: 280,
-  imageUrl: 'https://via.placeholder.com/300x200.png?text=Revolt',
-  speed: '85',
-  range: '150',
-  chargeTime: '4.5 hrs',
-  batteryStatus: 80,
-  location: '0,0'
-};
+// Shared Mock Data from HomeScreen
+const ALL_MOCK_VEHICLES: Vehicle[] = [
+  {
+    id: '1',
+    name: 'VanMoof S3',
+    type: 'Electric • Large Frame',
+    rating: 4.9,
+    tags: ['LIKE NEW', '25 KM RANGE', 'AVAILABLE'],
+    pricePerHour: 1250,
+    imageUrl: 'https://images.unsplash.com/photo-1571188654248-7a89213914f7?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+    speed: '32 km/h',
+    range: '25',
+    chargeTime: '2 hrs',
+    batteryStatus: 100,
+    location: '',
+  },
+  {
+    id: '2',
+    name: 'Ninebot Max G30',
+    type: 'Electric Scooter • Long Range',
+    rating: 4.8,
+    tags: ['GOOD CONDITION', '40 KM RANGE', 'AVAILABLE'],
+    pricePerHour: 650,
+    imageUrl: 'https://images.unsplash.com/photo-1593950315186-76a92975b60c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+    speed: '30 km/h',
+    range: '40',
+    chargeTime: '4 hrs',
+    batteryStatus: 85,
+    location: '',
+  },
+  {
+    id: '3',
+    name: 'Schwinn Loop',
+    type: 'Folding • Compact City',
+    rating: 5.0,
+    tags: ['EXCELLENT', 'MANUAL'],
+    pricePerHour: 950,
+    imageUrl: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+    speed: '20', // Human powered avg
+    range: 'Unlimited',
+    chargeTime: 'N/A',
+    batteryStatus: 100,
+    location: '',
+  },
+];
 
 type RootStackParamList = {
-  Compare: { vehicle1: Vehicle; vehicle2?: Vehicle };
-  Reserve: { vehicle: Vehicle };
+  Compare: { vehicle1?: Vehicle; vehicle2?: Vehicle; vehicles?: Vehicle[] };
+  Reserve: { vehicleId: string; vehicle?: Vehicle };
 };
 
 type CompareScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Compare'>;
@@ -54,16 +69,17 @@ export default function CompareScreen({ route }: any) {
   const themeColors = isDarkMode ? colors.background.dark : colors.background.light;
 
   const themeColorsDict = {
-    background: isDarkMode ? colors.background.dark : colors.background.light,
+    background: themeColors,
     surface: isDarkMode ? colors.background.secondaryDark : colors.background.secondaryLight,
     text: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight,
     textSecondary: isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight,
-    primary: colors.primary, // Changed from primary.main
-    border: isDarkMode ? colors.border.dark : colors.border.light,
+    primary: colors.primary, 
+    border: isDarkMode ? '#333333' : '#E0E0E0',
   };
 
-  const vehicle1: Vehicle = route.params?.vehicle1 || mockVehicle1;
-  const vehicle2: Vehicle = route.params?.vehicle2 || mockVehicle2;
+  const [selectedVehicle1, setSelectedVehicle1] = React.useState<Vehicle>(route.params?.vehicles?.[0] || route.params?.vehicle1 || ALL_MOCK_VEHICLES[0]);
+  const [selectedVehicle2, setSelectedVehicle2] = React.useState<Vehicle>(route.params?.vehicles?.[1] || route.params?.vehicle2 || ALL_MOCK_VEHICLES[1]);
+  const [showVehiclePicker, setShowVehiclePicker] = React.useState<'left' | 'right' | null>(null);
 
   const renderProgress = (val: number, max: number, color: string) => {
     const percent = Math.min((val / max) * 100, 100);
@@ -74,111 +90,190 @@ export default function CompareScreen({ route }: any) {
     );
   };
 
+  const getSpeedValue = (val: string | number | undefined) => val ? val.toString().replace(/[^0-9.]/g, '') : '0';
+  const getRangeValue = (val: string | number | undefined) => val ? val.toString().replace(/[^0-9.]/g, '') : '0';
+  const getChargeTime = (val: string | undefined) => val || '---';
+
+  const VehiclePickerModal = () => (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Select Vehicle to Compare</Text>
+          <TouchableOpacity onPress={() => setShowVehiclePicker(null)} style={styles.closeBtn}>
+            <Ionicons name="close" size={24} color="#1A1C29" />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={{ maxHeight: 400 }}>
+          {ALL_MOCK_VEHICLES.map((v) => (
+            <TouchableOpacity 
+              key={v.id} 
+              style={styles.pickerItem}
+              onPress={() => {
+                if (showVehiclePicker === 'left') setSelectedVehicle1(v);
+                if (showVehiclePicker === 'right') setSelectedVehicle2(v);
+                setShowVehiclePicker(null);
+              }}
+            >
+              <Image source={{ uri: v.imageUrl }} style={styles.pickerImg} />
+              <View style={styles.pickerInfo}>
+                <Text style={styles.pickerName}>{v.name}</Text>
+                <Text style={styles.pickerType}>{v.type}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={'#1A1C29'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Comparison</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity style={styles.settingsButton}>
+          <Ionicons name="settings-outline" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.imagesRow}>
-          <View style={styles.vehicleColumn}>
-            <View style={styles.imageCard}>
-              <View style={styles.tagContainer}>
-                <Text style={styles.tagText}>AV</Text>
+          <TouchableOpacity style={styles.vehicleColumn} onPress={() => setShowVehiclePicker('left')}>
+            <View style={[styles.imageCard, { backgroundColor: '#F8F9FA' }]}>
+              {selectedVehicle1.tags?.includes('AVAILABLE') && (
+                <View style={styles.tagContainer}>
+                  <Text style={styles.tagText}>AV</Text>
+                </View>
+              )}
+              <Image source={{ uri: selectedVehicle1.imageUrl }} style={styles.vehicleImage} resizeMode="contain" />
+              <View style={styles.changeIcon}>
+                <Ionicons name="swap-horizontal" size={16} color="#6B7280" />
               </View>
-              <Image source={{ uri: vehicle1.imageUrl }} style={styles.vehicleImage} resizeMode="contain" />
             </View>
-            <Text style={styles.vehicleName} numberOfLines={1}>{vehicle1.name}</Text>
-            <Text style={styles.vehicleType}>{vehicle1.type}</Text>
-          </View>
+            <Text style={styles.vehicleName} numberOfLines={1}>{selectedVehicle1.name}</Text>
+            <Text style={styles.vehicleType}>{selectedVehicle1.type}</Text>
+          </TouchableOpacity>
 
-          <View style={styles.vehicleColumn}>
-            <View style={styles.imageCard}>
-              <Image source={{ uri: vehicle2.imageUrl }} style={styles.vehicleImage} resizeMode="contain" />
+          <TouchableOpacity style={styles.vehicleColumn} onPress={() => setShowVehiclePicker('right')}>
+            <View style={[styles.imageCard, { backgroundColor: '#F8F9FA' }]}>
+              {selectedVehicle2.tags?.includes('AVAILABLE') && (
+                <View style={styles.tagContainer}>
+                  <Text style={styles.tagText}>AV</Text>
+                </View>
+              )}
+              <Image source={{ uri: selectedVehicle2.imageUrl }} style={styles.vehicleImage} resizeMode="contain" />
+              <View style={styles.changeIcon}>
+                <Ionicons name="swap-horizontal" size={16} color="#6B7280" />
+              </View>
             </View>
-            <Text style={styles.vehicleName} numberOfLines={1}>{vehicle2.name}</Text>
-            <Text style={styles.vehicleType}>{vehicle2.type}</Text>
-          </View>
+            <Text style={styles.vehicleName} numberOfLines={1}>{selectedVehicle2.name}</Text>
+            <Text style={styles.vehicleType}>{selectedVehicle2.type}</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.specsDivider} />
+        <View style={styles.divider} />
 
+        {/* Hourly Rate */}
         <View style={styles.comparisonRow}>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>HOURLY RATE</Text>
-             <Text style={styles.statValueDark}>₹{vehicle1.pricePerHour}<Text style={styles.statUnitDark}>/hr</Text></Text>
+             <View style={styles.rowCenterBaseline}>
+               <Text style={styles.statValueDark}>₹{selectedVehicle1.pricePerHour}</Text>
+               <Text style={styles.statUnitDark}>/hr</Text>
+             </View>
           </View>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>HOURLY RATE</Text>
-             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-               <Text style={styles.statValueBlue}>₹{vehicle2.pricePerHour}<Text style={styles.statUnitDark}>/hr</Text></Text>
-               <MaterialCommunityIcons name="check-decagram-outline" size={18} color="#2A64F6" style={{ marginLeft: 4, position: 'absolute', right: -25, top: 4 }} />
+             <View style={styles.rowCenterBaseline}>
+               <Text style={styles.statValueBlue}>₹{selectedVehicle2.pricePerHour}</Text>
+               <Text style={styles.statUnitDark}>/hr</Text>
+               <MaterialCommunityIcons name="check-decagram-outline" size={18} color="#2A64F6" style={styles.checkIcon} />
              </View>
           </View>
         </View>
 
-        <View style={styles.specsDividerSmall} />
+        <View style={styles.divider} />
 
+        {/* Top Speed */}
         <View style={styles.comparisonRow}>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>TOP SPEED</Text>
-             <Text style={styles.statValueDark}>{vehicle1.speed} <Text style={styles.statUnitDark}>km/h</Text></Text>
-             {renderProgress(70, 100, '#D4D8E2')}
+             <View style={styles.rowCenterBaseline}>
+               <Text style={styles.statValueDark}>{getSpeedValue(selectedVehicle1.speed)}</Text>
+               <Text style={styles.statUnitDark}> km/h</Text>
+             </View>
+             {renderProgress(parseInt(getSpeedValue(selectedVehicle1.speed)), 100, '#E5E7EB')}
           </View>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>TOP SPEED</Text>
-             <Text style={styles.statValueBlue}>{vehicle2.speed} <Text style={styles.statUnitDark}>km/h</Text></Text>
-             {renderProgress(85, 100, '#2A64F6')}
+             <View style={styles.rowCenterBaseline}>
+               <Text style={styles.statValueBlue}>{getSpeedValue(selectedVehicle2.speed)}</Text>
+               <Text style={styles.statUnitDark}> km/h</Text>
+             </View>
+             {renderProgress(parseInt(getSpeedValue(selectedVehicle2.speed)), 100, '#2A64F6')}
           </View>
         </View>
 
-        <View style={styles.specsDividerSmall} />
+        <View style={styles.divider} />
 
+        {/* Range */}
         <View style={styles.comparisonRow}>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>RANGE</Text>
              <View style={styles.rowCenter}>
-               <MaterialCommunityIcons name="battery" size={16} color="#B3B8C8" />
-               <Text style={[styles.statValueDark, { fontSize: 18, marginLeft: 4 }]}>{vehicle1.range} km</Text>
+               <MaterialCommunityIcons name="battery" size={18} color="#9CA3AF" />
+               <Text style={[styles.statValueDarkSecondary, { marginLeft: 4 }]}>{getRangeValue(selectedVehicle1.range)} km</Text>
              </View>
           </View>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>RANGE</Text>
              <View style={styles.rowCenter}>
-                <MaterialCommunityIcons name="battery-charging" size={16} color="#2A64F6" />
-               <Text style={[styles.statValueBlue, { fontSize: 18, marginLeft: 4 }]}>{vehicle2.range} km</Text>
+               <MaterialCommunityIcons name="battery-charging" size={18} color="#2A64F6" />
+               <Text style={[styles.statValueBlueSecondary, { marginLeft: 4 }]}>{getRangeValue(selectedVehicle2.range)} km</Text>
              </View>
           </View>
         </View>
-        
-        <View style={styles.specsDividerSmall} />
 
+        <View style={styles.divider} />
+
+        {/* Charge Time */}
         <View style={styles.comparisonRow}>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>CHARGE TIME</Text>
-             <Text style={[styles.statValueBlue, { fontSize: 18 }]}>{vehicle1.chargeTime}</Text>
+             <View style={styles.rowCenter}>
+               <MaterialCommunityIcons name="clock-outline" size={18} color="#9CA3AF" />
+               <Text style={[styles.statValueDarkSecondary, { marginLeft: 4 }]}>{getChargeTime(selectedVehicle1.chargeTime)}</Text>
+             </View>
           </View>
           <View style={styles.alignCenter}>
              <Text style={styles.statLabel}>CHARGE TIME</Text>
-             <Text style={[styles.statValueDark, { fontSize: 18 }]}>{vehicle2.chargeTime}</Text>
+             <View style={styles.rowCenter}>
+               <MaterialCommunityIcons name="clock-outline" size={18} color="#2A64F6" />
+               <Text style={[styles.statValueBlueSecondary, { marginLeft: 4 }]}>{getChargeTime(selectedVehicle2.chargeTime)}</Text>
+             </View>
           </View>
         </View>
 
         <View style={styles.actionRow}>
-           <TouchableOpacity style={styles.btnOutline}>
-             <Text style={styles.btnOutlineText}>Book Vespa</Text>
+           <TouchableOpacity 
+             style={styles.btnOutline}
+             onPress={() => navigation.navigate('Reserve', { vehicleId: selectedVehicle1.id })}
+           >
+             <Text style={styles.btnOutlineText}>Book {selectedVehicle1.name.split(' ')[0]}</Text>
            </TouchableOpacity>
-           <TouchableOpacity style={styles.btnSolid}>
-             <Text style={styles.btnSolidText}>Book Revolt</Text>
+           <TouchableOpacity 
+             style={styles.btnSolid}
+             onPress={() => navigation.navigate('Reserve', { vehicleId: selectedVehicle2.id })}
+           >
+             <Text style={styles.btnSolidText}>Book {selectedVehicle2.name.split(' ')[0]}</Text>
            </TouchableOpacity>
         </View>
 
       </ScrollView>
+
+      {showVehiclePicker && <VehiclePickerModal />}
     </View>
   );
 }
@@ -208,6 +303,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#1A1C29',
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   scrollContainer: {
     flex: 1,
@@ -265,16 +373,10 @@ const styles = StyleSheet.create({
     color: '#768196',
     letterSpacing: 0.5,
   },
-  specsDivider: {
-    height: 1,
-    backgroundColor: '#F0F2F5',
-    marginVertical: 30,
-  },
-  specsDividerSmall: {
+  divider: {
     height: 1,
     backgroundColor: '#F0F2F5',
     marginVertical: 20,
-    marginHorizontal: 10,
   },
   comparisonRow: {
     flexDirection: 'row',
@@ -291,25 +393,45 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#9CA4B4',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  rowCenterBaseline: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   statValueDark: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#1A1C29',
+    color: '#111827',
   },
   statValueBlue: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#2A64F6',
+    color: '#3B82F6',
+  },
+  statValueDarkSecondary: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statValueBlueSecondary: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#3B82F6',
   },
   statUnitDark: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#768196',
+    color: '#6B7280',
+    marginLeft: 2,
+  },
+  checkIcon: {
+    marginLeft: 6,
+    alignSelf: 'center',
   },
   progressTrack: {
     width: '80%',
@@ -353,5 +475,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  changeIcon: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    zIndex: 1000,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1C29',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F2F5',
+  },
+  pickerImg: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+  },
+  pickerInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  pickerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1C29',
+    marginBottom: 4,
+  },
+  pickerType: {
+    fontSize: 13,
+    color: '#6B7280',
   }
 });

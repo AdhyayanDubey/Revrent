@@ -41,7 +41,7 @@ export default function SignUpScreen() {
                 { 
                   backgroundColor: cardColor, 
                   color: textColor,
-                  borderColor: isDarkMode ? colors.border.dark : colors.border.light 
+                  borderColor: isDarkMode ? '#333333' : '#E5E7EB'
                 }
               ]}
               placeholder="Full Name"
@@ -59,7 +59,7 @@ export default function SignUpScreen() {
                 { 
                   backgroundColor: cardColor, 
                   color: textColor,
-                  borderColor: isDarkMode ? colors.border.dark : colors.border.light 
+                  borderColor: isDarkMode ? '#333333' : '#E5E7EB'
                 }
               ]}
               placeholder="Email"
@@ -78,7 +78,7 @@ export default function SignUpScreen() {
                 { 
                   backgroundColor: cardColor, 
                   color: textColor,
-                  borderColor: isDarkMode ? colors.border.dark : colors.border.light 
+                  borderColor: isDarkMode ? '#333333' : '#E5E7EB'
                 }
               ]}
               placeholder="Password"
@@ -98,9 +98,9 @@ export default function SignUpScreen() {
 
         <View style={styles.socialAuthContainer}>
           <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
+            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]} />
             <Text style={[styles.dividerText, { color: secondaryTextColor }]}>or continue with</Text>
-            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
+            <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]} />
           </View>
 
           <View style={styles.socialButtons}>

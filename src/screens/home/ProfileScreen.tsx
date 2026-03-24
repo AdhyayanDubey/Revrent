@@ -23,6 +23,10 @@ export default function ProfileScreen({ navigation }: any) {
     });
   };
 
+  const handleLoginRedirect = () => {
+    navigation.navigate('Login');
+  };
+
   const menuItems = [
     { title: 'Personal Information', icon: 'person-outline', onPress: () => {} },
     { title: 'Payment Methods', icon: 'card-outline', onPress: () => {} },
@@ -39,31 +43,57 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={[styles.headerTitle, { color: textColor }]}>Profile</Text>
         </View>
 
-        <View style={[styles.profileCard, { backgroundColor: cardColor }]}>
-          <Image source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileAvatar} />
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: textColor }]}>{user?.name || 'Jane Doe'}</Text>
-            <Text style={[styles.profileEmail, { color: secondaryTextColor }]}>{user?.email || 'jane.doe@example.com'}</Text>
-            <TouchableOpacity style={styles.editProfileBtn}>
-              <Text style={styles.editProfileText}>Edit Profile</Text>
+        {!user ? (
+          <View style={[styles.authPromptCard, { backgroundColor: cardColor }]}>
+            <Ionicons name="person-circle-outline" size={64} color={colors.primary} />
+            <Text style={[styles.authPromptTitle, { color: textColor }]}>Sign in or Create Account</Text>
+            <Text style={[styles.authPromptText, { color: secondaryTextColor }]}>Login to view your saved vehicles, track your rentals, and enjoy a seamless booking experience.</Text>
+            <TouchableOpacity style={styles.authPromptButton} onPress={handleLoginRedirect}>
+              <Text style={styles.authPromptButtonText}>Continue with Email / Phone</Text>
             </TouchableOpacity>
+            
+            <View style={styles.socialButtonsRow}>
+              <TouchableOpacity style={styles.socialIconButton}>
+                <Image 
+                  source={{ uri: 'https://img.icons8.com/?size=100&id=17949&format=png&color=000000' }} 
+                  style={styles.socialIconMini} 
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.socialIconButton, { backgroundColor: '#111827', borderColor: '#111827' }]}>
+                <Ionicons name="logo-apple" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : (
+          <>
+            <View style={[styles.profileCard, { backgroundColor: cardColor }]}>
+              <Image source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileAvatar} />
+              <View style={styles.profileInfo}>
+                <Text style={[styles.profileName, { color: textColor }]}>{user?.name || 'Alexander Doe'}</Text>
+                <Text style={[styles.profileEmail, { color: secondaryTextColor }]}>{user?.email || '+1 (555) 123-4567'}</Text>
+                <TouchableOpacity style={styles.editProfileBtn}>
+                  <Text style={styles.editProfileText}>Edit Profile</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        <View style={styles.statsContainer}>
-          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-            <Text style={[styles.statValue, { color: textColor }]}>12</Text>
-            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rentals</Text>
-          </View>
-          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-            <Text style={[styles.statValue, { color: textColor }]}>$450</Text>
-            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Spent</Text>
-          </View>
-          <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-            <Text style={[styles.statValue, { color: textColor }]}>4.9</Text>
-            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rating</Text>
-          </View>
-        </View>
+            <View style={styles.statsContainer}>
+              <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+                <Text style={[styles.statValue, { color: textColor }]}>12</Text>
+                <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rentals</Text>
+              </View>
+              <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+                <Text style={[styles.statValue, { color: textColor }]}>$450</Text>
+                <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Spent</Text>
+              </View>
+              <View style={[styles.statBox, { backgroundColor: cardColor }]}>
+                <Text style={[styles.statValue, { color: textColor }]}>4.9</Text>
+                <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rating</Text>
+              </View>
+            </View>
+          </>
+        )}
 
         <View style={styles.menuContainer}>
           {menuItems.map((item, index) => (
@@ -77,10 +107,12 @@ export default function ProfileScreen({ navigation }: any) {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#1D4ED8" />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+        {user && (
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#1D4ED8" />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -97,6 +129,63 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  authPromptCard: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  authPromptTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  authPromptText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  authPromptButton: {
+    backgroundColor: '#1D4ED8',
+    width: '100%',
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  authPromptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  socialButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  socialIconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialIconMini: {
+    width: 24,
+    height: 24,
   },
   profileCard: {
     flexDirection: 'row',

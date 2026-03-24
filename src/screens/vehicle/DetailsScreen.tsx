@@ -111,15 +111,23 @@ export default function DetailsScreen() {
       {/* Bottom Sticky Bar */}
       <View style={[styles.bottomBar, { 
         backgroundColor: themeColors,
-        borderTopColor: isDarkMode ? colors.border.dark : colors.border.light 
+        borderTopColor: isDarkMode ? '#333333' : '#E0E0E0' 
       }]}>
-        <View>
-          <Text style={[styles.priceAmount, { color: textColor }]}>₹{vehicle.pricePerHour}<Text style={[styles.priceUnit, { color: secondaryTextColor }]}>/hr</Text></Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <Button
+            title="Compare"
+            onPress={() => navigation.navigate('Compare', { vehicles: [vehicle] })}
+            variant="outline"
+            style={{ flex: 1, height: 46 }}
+            textStyle={{ fontSize: 15, fontWeight: '600', flexShrink: 1, textAlign: 'center' }}
+          />
+          <Button 
+            title={`₹${vehicle.pricePerHour}/hr • Reserve`}
+            onPress={() => navigation.navigate('Reserve', { vehicleId: vehicle.id })} 
+            style={{ flex: 1.5, height: 46 }}
+            textStyle={{ fontSize: 15, fontWeight: '600', flexShrink: 1, textAlign: 'center' }}
+          />
         </View>
-        <Button 
-          title="Reserve Now" 
-          onPress={() => navigation.navigate('Reserve', { vehicleId: vehicle.id })} 
-        />
       </View>
     </View>
   );
@@ -237,19 +245,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: spacing.l,
-    paddingTop: spacing.m,
-    paddingBottom: Platform.OS === 'ios' ? 34 : spacing.m,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1,
-  },
-  priceAmount: {
-    ...typography.h1,
-    color: colors.primary,
-  },
-  priceUnit: {
-    ...typography.body,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 5,
   },
 });
