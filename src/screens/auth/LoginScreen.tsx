@@ -7,6 +7,11 @@ import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Button } from '../../components/common/Button';
 import { useAppStore } from '../../store';
 import { supabase } from '../../services/supabase';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+
+// To handle auth redirects smoothly on apps
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -45,6 +50,83 @@ export default function LoginScreen() {
         phone: data.user.phone || ''
       });
       navigation.replace('Home');
+    }
+  };
+
+  const handleOAuthLogin = async (provider: 'google' | 'apple') => {
+    try {
+      setLoading(true);
+
+      // Verify if user already exists
+      // Assuming email is checked on successful callback, but normally 
+      // Supabase automatically links accounts if enabled in dashboard.
+      // If the requirement is "users cannot log in if they hadn't signed up", 
+      // we check for existing profile on callback.
+
+      const redirectUrl = Linking.createURL('/auth/callback');
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: redirectUrl,
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        
+        if (result.type === 'success') {
+          const { url } = result;
+          // Parse the URL to get the access token and refresh token
+          // Since Supabase handles the session via URL hash automatically if configured,
+          // or we can manually set the session.
+          
+          const params = new URL(url.replace('#', '?')).searchParams;
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+             const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+             });
+
+             if (sessionError) throw sessionError;
+
+             // Fetch the user's profile to check if they have signed up
+             if (sessionData.user) {
+               const { data: profileData } = await supabase
+                 .from('profiles')
+                 .select('*')
+                 .eq('id', sessionData.user.id)
+                 .single();
+
+               if (!profileData) {
+                 // The user has not signed up (profile doesn't exist)
+                 // Sign them out and alert
+                 await supabase.auth.signOut();
+                 Alert.alert('Login Failed', 'You must sign up before logging in.');
+                 return;
+               }
+
+               // User exists, setup store and navigate
+               useAppStore.getState().setUser({ 
+                 id: sessionData.user.id, 
+                 name: sessionData.user.user_metadata?.full_name || 'User',
+                 email: sessionData.user.email || '',
+                 phone: sessionData.user.phone || ''
+               });
+               navigation.replace('Home');
+             }
+          }
+        }
+      }
+    } catch (err: any) {
+      Alert.alert(`${provider} Login Failed`, err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,7 +202,7 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.socialButtons}>
-                <TouchableOpacity style={[styles.socialButton, { borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }]} onPress={handleLogin}>
+                <TouchableOpacity style={[styles.socialButton, { borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }]} onPress={() => handleOAuthLogin('google')}>
                   <Image 
                     source={{ uri: 'https://img.icons8.com/?size=100&id=17949&format=png&color=000000' }} 
                     style={styles.socialIcon} 
@@ -128,7 +210,7 @@ export default function LoginScreen() {
                   />
                   <Text style={styles.socialButtonText}>Google</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.socialButton, { borderColor: '#111827', backgroundColor: '#111827' }]} onPress={handleLogin}>
+                <TouchableOpacity style={[styles.socialButton, { borderColor: '#111827', backgroundColor: '#111827' }]} onPress={() => handleOAuthLogin('apple')}>
                   <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
                   <Text style={[styles.socialButtonText, { color: '#FFFFFF' }]}>Apple</Text>
                 </TouchableOpacity>

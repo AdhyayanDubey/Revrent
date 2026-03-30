@@ -25,6 +25,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "scheme": "revrent",
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
