@@ -1,31 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Image, KeyboardAvoidingView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { useAppStore } from '../../store';
 import { Button } from '../../components/common/Button';
 
-const RATING_TAGS = [
-  'Smooth Ride', 
-  'Clean Vehicle', 
-  'Good Battery', 
-  'Easy Pickup',
-  'Issues with brakes',
-  'Damaged parts'
-];
-
 export default function FeedbackScreen() {
-  const isDarkMode = useAppStore(state => state.isDarkMode);
   const navigation = useNavigation<any>();
+  const isDarkMode = useAppStore(state => state.isDarkMode);
   
   const [rating, setRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
-
-  const themeColors = isDarkMode ? colors.background.dark : colors.background.light;
-  const textColor = isDarkMode ? colors.text.primaryDark : colors.text.primaryLight;
-  const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight;
-  const cardColor = isDarkMode ? colors.card.dark : colors.card.light;
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -41,21 +29,21 @@ export default function FeedbackScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? colors.background.dark : colors.background.light }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.closeButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={{ fontSize: 24, color: textColor }}>×</Text>
+          <Text style={{ fontSize: 24, color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }}>×</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Rate your ride</Text>
+        <Text style={[styles.headerTitle, { color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }]}>Rate your ride</Text>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
+        <Text style={[styles.subtitle, { color: isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight }]}>
           How was your experience with Rev-S1 Pro?
         </Text>
 
@@ -67,22 +55,23 @@ export default function FeedbackScreen() {
               onPress={() => setRating(star)}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.star, 
-                { color: star <= rating ? colors.warning : (isDarkMode ? colors.border.dark : '#E0E0E0') }
-              ]}>
-                ★
-              </Text>
+              <Ionicons 
+                name={star <= rating ? "star" : "star-outline"} 
+                size={40} 
+                style={[
+                styles.starIcon,
+                { color: star <= rating ? colors.warning : (isDarkMode ? '#374151' : '#E0E0E0') }
+                ]}
+              />
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Tags */}
         {rating > 0 && (
-          <View style={styles.tagsSection}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>What went well?</Text>
+          <View style={styles.reviewContent}>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }]}>What stood out?</Text>
             <View style={styles.tagsContainer}>
-              {RATING_TAGS.map(tag => {
+              {['Cleanliness', 'Condition', 'Pickup Location', 'Battery Life', 'Communication'].map(tag => {
                 const isSelected = selectedTags.includes(tag);
                 return (
                   <TouchableOpacity
@@ -90,62 +79,55 @@ export default function FeedbackScreen() {
                     style={[
                       styles.tag,
                       { 
-                        backgroundColor: isSelected ? colors.primary : cardColor,
-                        borderColor: isSelected ? colors.primary : (isDarkMode ? colors.border.dark : colors.border.light)
+                        backgroundColor: isSelected ? `${colors.primary}10` : (isDarkMode ? colors.background.dark : '#F3F4F6'),
+                        borderColor: isSelected ? colors.primary : (isDarkMode ? '#374151' : '#E5E7EB')
                       }
                     ]}
                     onPress={() => toggleTag(tag)}
                   >
                     <Text style={[
                       styles.tagText,
-                      { color: isSelected ? '#FFF' : textColor }
-                    ]}>
-                      {tag}
-                    </Text>
+                      { color: isSelected ? colors.primary : (isDarkMode ? colors.text.primaryDark : colors.text.primaryLight) }
+                    ]}>{tag}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }]}>Additional Comments</Text>
+            <TextInput
+              style={[
+                styles.textArea,
+                { 
+                backgroundColor: isDarkMode ? colors.background.dark : '#F9FAFB',
+                color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight,
+                borderColor: isDarkMode ? '#374151' : '#D1D5DB'
+                }
+              ]}
+              placeholder="Tell us what you liked or what could be improved..."
+              placeholderTextColor={isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight}
+              multiline
+              numberOfLines={4}
+              value={comment}
+              onChangeText={setComment}
+              textAlignVertical="top"
+            />
           </View>
         )}
 
-        {/* Comment Input */}
-        <View style={styles.commentSection}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Additional comments</Text>
-          <TextInput
-            style={[
-              styles.textInput, 
-              { 
-                backgroundColor: cardColor,
-                color: textColor,
-                borderColor: isDarkMode ? colors.border.dark : colors.border.light
-              }
-            ]}
-            placeholder="Tell us more about your experience..."
-            placeholderTextColor={secondaryTextColor}
-            multiline
-            numberOfLines={4}
-            value={comment}
-            onChangeText={setComment}
-            textAlignVertical="top"
-          />
-        </View>
-
         {/* Photo Upload */}
         <View style={styles.uploadSection}>
-          <TouchableOpacity 
-            style={[
-              styles.uploadArea, 
-              { 
-                backgroundColor: cardColor,
-                borderColor: isDarkMode ? colors.border.dark : colors.border.light,
-                borderStyle: 'dashed'
-              }
-            ]}
-          >
+          <Text style={[styles.sectionTitle, { color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }]}>Add Media</Text>
+          <TouchableOpacity style={[
+                styles.uploadButton,
+                { 
+                backgroundColor: isDarkMode ? colors.background.dark : '#F9FAFB',
+                borderColor: isDarkMode ? '#374151' : '#D1D5DB',
+                }
+              ]}>
             <Text style={styles.uploadIcon}>📸</Text>
-            <Text style={[styles.uploadText, { color: textColor }]}>Add Photos / Videos</Text>
-            <Text style={[styles.uploadSubtext, { color: secondaryTextColor }]}>Optional</Text>
+            <Text style={[styles.uploadText, { color: isDarkMode ? colors.text.primaryDark : colors.text.primaryLight }]}>Add Photos / Videos</Text>
+            <Text style={[styles.uploadSubtext, { color: isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight }]}>Optional</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -163,7 +145,7 @@ export default function FeedbackScreen() {
           style={styles.submitButton}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -203,10 +185,10 @@ const styles = StyleSheet.create({
     gap: spacing.m,
     marginBottom: spacing.xl,
   },
-  star: {
-    fontSize: 48,
+  starIcon: {
+    color: colors.warning,
   },
-  tagsSection: {
+  reviewContent: {
     marginBottom: spacing.xl,
   },
   sectionTitle: {
@@ -231,7 +213,7 @@ const styles = StyleSheet.create({
   commentSection: {
     marginBottom: spacing.xl,
   },
-  textInput: {
+  textArea: {
     width: '100%',
     padding: spacing.m,
     borderRadius: borderRadius.m,
@@ -241,7 +223,7 @@ const styles = StyleSheet.create({
   uploadSection: {
     marginBottom: spacing.xl,
   },
-  uploadArea: {
+  uploadButton: {
     width: '100%',
     padding: spacing.xl,
     borderRadius: borderRadius.m,

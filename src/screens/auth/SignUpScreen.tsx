@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Button } from '../../components/common/Button';
 import { useAppStore } from '../../store';
+import { supabase } from '../../services/supabase';
 
 export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const navigation = useNavigation<any>();
 
@@ -18,8 +20,61 @@ export default function SignUpScreen() {
   const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : colors.text.secondaryLight;
   const cardColor = isDarkMode ? colors.card.dark : colors.card.light;
 
-  const handleSignUp = () => {
-    navigation.replace('Home');
+  const handleSignUp = async () => {
+    if (!email || !password || !name) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // 1. Sign up the user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (error) throw error; // Will automatically skip to the catch block
+
+      // 2. Automatically insert their profile into our public profiles table
+      // Note: If you set up a Postgres trigger, this step might be optional, 
+      // but doing it here guarantees the profile state exists with 'client' role.
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: data.user.id, 
+              name: name, 
+              phone: null,
+              role: 'client' 
+            }
+          ]);
+          
+        if (profileError && profileError.code !== '23505') { 
+          // Ignore 23505 (Unique violation) in case a DB trigger already created it
+          console.error("Profile creation error:", profileError.message);
+        }
+
+        useAppStore.getState().setUser({
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || name,
+          email: data.user.email || email,
+          phone: data.user.phone || ''
+        });
+      }
+      navigation.replace('Home');
+    } catch (err: any) {
+      Alert.alert('Sign Up Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,9 +145,10 @@ export default function SignUpScreen() {
           </View>
 
           <Button 
-            title="Sign Up" 
+            title={loading ? "Loading..." : "Sign Up"} 
             onPress={handleSignUp} 
             style={styles.signUpButton}
+            disabled={loading}
           />
         </View>
 

@@ -1,26 +1,91 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme';
 import { useAppStore } from '../../store';
+import { supabase } from '../../services/supabase';
 
 export default function ProfileScreen({ navigation }: any) {
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const toggleDarkMode = useAppStore(state => state.toggleDarkMode);
   const user = useAppStore(state => state.user);
   const setUser = useAppStore(state => state.setUser);
+  
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({ rentals: 0, spent: 0, rating: 0 });
 
   const themeColors = isDarkMode ? colors.background.dark : '#F9FAFB';
   const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
   const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
   const cardColor = isDarkMode ? colors.card.dark : '#FFFFFF';
 
-  const handleLogout = () => {
-    setUser(null);
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Auth' }],
-    });
+  useEffect(() => {
+    if (user) {
+      fetchProfileData();
+    } else {
+      setProfileData(null);
+      setStats({ rentals: 0, spent: 0, rating: 0 });
+    }
+  }, [user]);
+
+  const fetchProfileData = async () => {
+    if (!user) return; // Added null check
+
+    try {
+      setLoading(true);
+      
+      // Fetch profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) {
+          console.error('Error fetching profile:', profileError);
+      } else {
+          setProfileData(profile);
+      }
+
+      // Fetch booking stats
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('total_price')
+        .eq('user_id', user.id);
+
+      if (bookingsError) {
+          console.error('Error fetching bookings:', bookingsError);
+      } else {
+          const totalRentals = bookings?.length || 0;
+          const totalSpent = bookings?.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0) || 0;
+          
+          setStats({
+              rentals: totalRentals,
+              spent: totalSpent,
+              rating: profile?.rating || 4.9 // Default or from profile
+          });
+      }
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to log out');
+    }
   };
 
   const handleLoginRedirect = () => {
@@ -68,27 +133,33 @@ export default function ProfileScreen({ navigation }: any) {
         ) : (
           <>
             <View style={[styles.profileCard, { backgroundColor: cardColor }]}>
-              <Image source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileAvatar} />
-              <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { color: textColor }]}>{user?.name || 'Alexander Doe'}</Text>
-                <Text style={[styles.profileEmail, { color: secondaryTextColor }]}>{user?.email || '+1 (555) 123-4567'}</Text>
-                <TouchableOpacity style={styles.editProfileBtn}>
-                  <Text style={styles.editProfileText}>Edit Profile</Text>
-                </TouchableOpacity>
-              </View>
+              {loading ? (
+                <ActivityIndicator size="large" color={colors.primary} style={{ padding: 20 }} />
+              ) : (
+                <>
+                  <Image source={{ uri: profileData?.avatar_url || 'https://randomuser.me/api/portraits/men/32.jpg' }} style={styles.profileAvatar} />
+                  <View style={styles.profileInfo}>
+                    <Text style={[styles.profileName, { color: textColor }]}>{profileData?.full_name || user?.name || 'User'}</Text>
+                    <Text style={[styles.profileEmail, { color: secondaryTextColor }]}>{user?.email || '+1 (555) 123-4567'}</Text>
+                    <TouchableOpacity style={styles.editProfileBtn}>
+                      <Text style={styles.editProfileText}>Edit Profile</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
 
             <View style={styles.statsContainer}>
               <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-                <Text style={[styles.statValue, { color: textColor }]}>12</Text>
+                {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={[styles.statValue, { color: textColor }]}>{stats.rentals}</Text>}
                 <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rentals</Text>
               </View>
               <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-                <Text style={[styles.statValue, { color: textColor }]}>$450</Text>
+                {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={[styles.statValue, { color: textColor }]}>₹{stats.spent}</Text>}
                 <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Spent</Text>
               </View>
               <View style={[styles.statBox, { backgroundColor: cardColor }]}>
-                <Text style={[styles.statValue, { color: textColor }]}>4.9</Text>
+                {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={[styles.statValue, { color: textColor }]}>{stats.rating}</Text>}
                 <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rating</Text>
               </View>
             </View>
@@ -296,7 +367,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#1D4ED8',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginLeft: 8,
-  }
+  },
 });

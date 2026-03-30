@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { useAppStore } from '../../store';
 import { Button } from '../../components/common/Button';
+import { supabase } from '../../services/supabase';
 
 export default function ReserveScreen() {
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const user = useAppStore(state => state.user);
   
   const [timeLeft, setTimeLeft] = useState(599); // 9:59 in seconds
   const [selectedPayment, setSelectedPayment] = useState('card');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const themeColors = isDarkMode ? colors.background.dark : '#FFFFFF';
   const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
   const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
   const cardColor = isDarkMode ? colors.card.dark : '#FFFFFF';
+
+  const { vehicle } = route.params || {};
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -35,8 +40,54 @@ export default function ReserveScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handlePayment = () => {
-    navigation.navigate('Confirmation');
+  const handlePayment = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to reserve a vehicle.');
+      navigation.navigate('Login');
+      return;
+    }
+
+    if (!vehicle) {
+      Alert.alert('Error', 'No vehicle selected.');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Calculate total price (just hold fee for now, but usually would include daily rate * days)
+      const totalPrice = 30; // Token hold fee
+
+      // Create booking in Supabase
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          vehicle_id: vehicle.id,
+          start_date: new Date().toISOString(), // In a real app, these would be selected dates
+          end_date: new Date(Date.now() + 86400000).toISOString(), // +1 day
+          total_price: totalPrice,
+          status: 'pending' // Should update to confirmed after real payment
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update vehicle status
+      const { error: vehicleError } = await supabase
+        .from('vehicles')
+        .update({ available: false })
+        .eq('id', vehicle.id);
+        
+      if (vehicleError) throw vehicleError;
+
+      navigation.navigate('Confirmation', { booking: data, vehicle });
+    } catch (error: any) {
+      Alert.alert('Booking Error', error.message || 'Failed to complete reservation.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -46,6 +97,7 @@ export default function ReserveScreen() {
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          disabled={isProcessing}
         >
           <Ionicons name="chevron-back" size={24} color={textColor} />
         </TouchableOpacity>
@@ -69,6 +121,13 @@ export default function ReserveScreen() {
             Complete payment to hold this{'\n'}vehicle for 15 mins.
           </Text>
         </View>
+
+        {vehicle && (
+            <View style={[styles.vehicleInfoCard, { backgroundColor: cardColor, borderColor: '#E5E7EB' }]}>
+                <Text style={[styles.vehicleInfoTitle, { color: textColor }]}>{vehicle.make} {vehicle.model}</Text>
+                <Text style={[styles.vehicleInfoSubtitle, { color: secondaryTextColor }]}>{vehicle.year}</Text>
+            </View>
+        )}
 
         {/* Pricing Section */}
         <View style={styles.pricingSection}>
@@ -101,7 +160,7 @@ export default function ReserveScreen() {
               <Text style={[styles.paymentMethodSubtitle, { color: secondaryTextColor }]}>Personal</Text>
             </View>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity disabled={isProcessing}>
             <Text style={styles.changeText}>Change</Text>
           </TouchableOpacity>
         </View>
@@ -113,9 +172,10 @@ export default function ReserveScreen() {
         borderTopColor: '#F3F4F6',
       }]}>
         <Button 
-          title="Pay ₹30 & Hold →" 
+          title={isProcessing ? "Processing..." : "Pay ₹30 & Hold →"} 
           onPress={handlePayment} 
           style={styles.payButton}
+          disabled={isProcessing}
         />
         <View style={styles.secureContainer}>
           <Ionicons name="lock-closed-outline" size={12} color="#9CA3AF" />
@@ -150,128 +210,131 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    alignItems: 'center',
   },
   timerWrapper: {
     alignItems: 'center',
     marginBottom: 32,
-    marginTop: 16,
   },
   timerCircleOuter: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 8,
-    borderColor: '#10B981',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   timerCircleInner: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   timerText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    letterSpacing: -1,
+    fontSize: 32,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   timerSubtitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#9CA3AF',
     letterSpacing: 1,
+    marginTop: 4,
   },
   timerNote: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
+  vehicleInfoCard: {
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  vehicleInfoTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  vehicleInfoSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+  },
   pricingSection: {
     alignItems: 'center',
     marginBottom: 32,
   },
   amountText: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: 'bold',
-    letterSpacing: -2,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   badgeContainer: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
   },
   badgeText: {
     color: '#2563EB',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   infoCard: {
-    width: '100%',
-    padding: 20,
-    borderRadius: 16,
     borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 24,
   },
   infoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   infoIcon: {
-    marginRight: 10,
-    backgroundColor: '#DBEAFE',
-    padding: 6,
-    borderRadius: 16,
-    overflow: 'hidden',
+    marginRight: 8,
   },
   infoTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   infoDesc: {
     fontSize: 14,
-    lineHeight: 22,
-    paddingLeft: 42, // align with text
+    lineHeight: 20,
+    paddingLeft: 32,
   },
   paymentMethodCard: {
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    marginBottom: 32,
+    borderRadius: 16,
+    marginBottom: 24,
   },
   paymentMethodLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   cardIconDummy: {
+    flexDirection: 'row',
     width: 40,
-    height: 28,
+    height: 24,
     backgroundColor: '#F3F4F6',
     borderRadius: 4,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    marginRight: 12,
   },
   cardDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   paymentMethodTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   paymentMethodSubtitle: {
     fontSize: 12,
@@ -279,28 +342,26 @@ const styles = StyleSheet.create({
   changeText: {
     color: '#2563EB',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   bottomBar: {
     padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   payButton: {
-    width: '100%',
-    backgroundColor: '#2563EB',
-    height: 56,
-    borderRadius: 16,
     marginBottom: 16,
+    height: 56,
   },
   secureContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   secureText: {
     color: '#9CA3AF',
     fontSize: 12,
     marginLeft: 6,
+    fontWeight: '500',
   },
 });

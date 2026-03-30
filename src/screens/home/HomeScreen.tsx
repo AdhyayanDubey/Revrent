@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Animated, ScrollView, SafeAreaView, Dimensions, Platform, Modal } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Animated, ScrollView, Dimensions, Platform, Modal, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { useAppStore } from '../../store';
 import { Vehicle } from '../../types';
 import { Button } from '../../components/common/Button';
+import { supabase } from '../../services/supabase';
 
 // Mock data
 const CATEGORIES = [
@@ -99,30 +101,25 @@ const VehicleCard = ({ vehicle, isDarkMode }: { vehicle: Vehicle, isDarkMode: bo
             <Text style={styles.badgeRatingText}>{vehicle.rating}</Text>
           </View>
         </View>
-        
+
         <View style={styles.cardContent}>
-          <Text style={[styles.vehicleName, { color: textColor }]}>{vehicle.name}</Text>
-          <Text style={[styles.vehicleType, { color: secondaryTextColor }]}>{vehicle.type}</Text>
-          
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { color: textColor }]}>{vehicle.name}</Text>
+            <View style={styles.priceContainer}>
+              <Text style={[styles.priceAmount, { color: colors.primary }]}>₹{vehicle.pricePerHour}</Text>
+              <Text style={[styles.priceUnit, { color: secondaryTextColor }]}>/hr</Text>
+            </View>
+          </View>
+          <Text style={[styles.cardSubtitle, { color: secondaryTextColor }]}>{vehicle.type}</Text>
+
+          {/* Tags */}
           <View style={styles.tagsContainer}>
-            {vehicle.tags.map((tag, idx) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: '#F3F4F6', marginLeft: idx > 0 ? 8 : 0 }]}>
+            {vehicle.tags?.map((tag, index) => (
+              <View key={index} style={styles.tagWrapper}>
+                <Ionicons name={tag.includes('RANGE') ? 'battery-charging' : 'checkmark-circle'} size={12} color="#4B5563" />
                 <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
-          </View>
-
-          <View style={styles.cardFooter}>
-            <View>
-              <Text style={[styles.priceTitle, { color: '#9CA3AF', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }]}>RATE</Text>
-              <Text style={[styles.priceAmount, { color: textColor, fontSize: 24, fontWeight: 'bold' }]}>₹{vehicle.pricePerHour.toLocaleString()}<Text style={[styles.priceUnit, { color: secondaryTextColor, fontSize: 14, fontWeight: 'normal' }]}> /hr</Text></Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.reserveButton}
-              onPress={() => navigation.navigate('Reserve', { vehicleId: vehicle.id })}
-            >
-              <Text style={styles.reserveButtonText}>Reserve</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>
@@ -133,14 +130,91 @@ const VehicleCard = ({ vehicle, isDarkMode }: { vehicle: Vehicle, isDarkMode: bo
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const isDarkMode = useAppStore(state => state.isDarkMode);
-  const themeColors = isDarkMode ? colors.background.dark : '#F9FAFB';
-  const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
-  const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
-  
   const [activeCategory, setActiveCategory] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showFilterModal, setShowFilterModal] = React.useState(false);
   const [showNotificationModal, setShowNotificationModal] = React.useState(false);
+  const [vehicles, setVehicles] = React.useState<Vehicle[]>(MOCK_VEHICLES);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  // Custom Filter State
+  const [tempPriceRange, setTempPriceRange] = React.useState<[number, number]>([0, 2000]);
+  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 2000]);
+  const [tempMinRating, setTempMinRating] = React.useState(0);
+  const [minRating, setMinRating] = React.useState(0);
+
+  const themeColors = isDarkMode ? colors.background.dark : '#F3F4F6';
+  const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
+  const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
+  const cardColor = isDarkMode ? colors.card.dark : '#FFFFFF';
+
+  // Fetch real data from Supabase
+  React.useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('is_available', true);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          // Map DB columns to our Vehicle type
+          const formattedVehicles: Vehicle[] = data.map(v => ({
+            id: v.id,
+            name: v.name,
+            type: v.type,
+            rating: v.rating,
+            tags: v.tags || [],
+            pricePerHour: v.price_per_hour,
+            imageUrl: v.image_url,
+            speed: v.speed,
+            range: v.range,
+            chargeTime: v.charge_time,
+            batteryStatus: v.battery_status,
+            location: v.location || '',
+          }));
+          setVehicles(formattedVehicles);
+        }
+      } catch (err) {
+        console.error('Error fetching vehicles:', err);
+        // Fallback to mock data if it fails
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchVehicles();
+  }, []);
+
+  const filteredVehicles = React.useMemo(() => {
+    return vehicles.filter(v => {
+      // 1. Search Query Filter
+      if (searchQuery && !v.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      // 2. Category Filter
+      let matchesCategory = true;
+      if (activeCategory !== 'all') {
+        matchesCategory = v.type.toLowerCase().includes(activeCategory);
+      }
+      
+      // 3. Price Range Filter
+      const withinPriceRange = v.pricePerHour >= priceRange[0] && v.pricePerHour <= priceRange[1];
+      
+      // 4. Rating Filter
+      const meetsMinRating = v.rating >= minRating;
+      
+      return matchesCategory && withinPriceRange && meetsMinRating;
+    });
+  }, [vehicles, activeCategory, priceRange, minRating, searchQuery]);
+
+  const handleApplyFilter = () => {
+    setPriceRange(tempPriceRange);
+    setMinRating(tempMinRating);
+    setShowFilterModal(false);
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors }]}>
@@ -211,14 +285,28 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* Vehicles List */}
-      <FlatList
-        data={MOCK_VEHICLES}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <VehicleCard vehicle={item} isDarkMode={isDarkMode} />}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Vehicle List */}
+      {isLoading ? (
+        <View style={{ padding: 40, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredVehicles}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <VehicleCard vehicle={item} isDarkMode={isDarkMode} />}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={48} color="#D1D5DB" />
+              <Text style={[styles.emptyTitle, { color: textColor }]}>No Vehicles Found</Text>
+              <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>Try adjusting your filters</Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: themeColors, borderTopColor: isDarkMode ? '#374151' : '#F3F4F6' }]}>
@@ -458,47 +546,52 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: 24,
   },
-  vehicleName: {
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  priceAmount: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginRight: 4,
   },
-  vehicleType: {
+  priceUnit: {
+    fontSize: 14,
+    fontWeight: 'normal',
+    color: '#6B7280',
+  },
+  cardSubtitle: {
     fontSize: 14,
     marginBottom: 16,
   },
   tagsContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  tag: {
-    paddingHorizontal: 12,
+  tagWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
   },
   tagText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
     color: '#374151',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  priceTitle: {},
-  priceAmount: {},
-  priceUnit: {},
-  reserveButton: {
-    backgroundColor: '#0B0F19',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  reserveButtonText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
   bottomNav: {
     flexDirection: 'row',
@@ -561,5 +654,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
-  }
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
 });

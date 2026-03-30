@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Image, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../theme';
 import { Button } from '../../components/common/Button';
 import { useAppStore } from '../../store';
+import { supabase } from '../../services/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const navigation = useNavigation<any>();
 
@@ -17,8 +21,31 @@ export default function LoginScreen() {
   const textColor = isDarkMode ? colors.text.primaryDark : '#111827';
   const secondaryTextColor = isDarkMode ? colors.text.secondaryDark : '#6B7280';
 
-  const handleLogin = () => {
-    navigation.replace('Home');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Login Failed', error.message);
+    } else {
+      // Setup successful auth inside state
+      useAppStore.getState().setUser({ 
+        id: data.user.id, 
+        name: data.user.user_metadata?.full_name || 'User',
+        email: data.user.email || '',
+        phone: data.user.phone || ''
+      });
+      navigation.replace('Home');
+    }
   };
 
   return (
@@ -48,7 +75,7 @@ export default function LoginScreen() {
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Email or Phone Number</Text>
-                <View style={[styles.inputWrapper, { borderColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]}>
+                <View style={[styles.inputWrapper, { borderColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
                   <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                   <TextInput
                     style={[styles.input, { color: textColor }]}
@@ -62,18 +89,34 @@ export default function LoginScreen() {
                 </View>
               </View>
 
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={[styles.inputWrapper, { borderColor: isDarkMode ? '#333333' : '#E5E7EB' }]}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: textColor }]}
+                    placeholder="********"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                  />
+                </View>
+              </View>
+
               <Button 
-                title="Continue" 
+                title={loading ? "Loading..." : "Continue"} 
                 onPress={handleLogin} 
                 style={styles.loginButton}
+                disabled={loading}
               />
             </View>
 
             <View style={styles.socialAuthContainer}>
               <View style={styles.divider}>
-                <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
+                <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]} />
                 <Text style={[styles.dividerText, { color: secondaryTextColor }]}>or continue with</Text>
-                <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? colors.border.dark : '#E5E7EB' }]} />
+                <View style={[styles.dividerLine, { backgroundColor: isDarkMode ? '#333333' : '#E5E7EB' }]} />
               </View>
 
               <View style={styles.socialButtons}>

@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store';
+import { supabase } from '../../services/supabase';
 
 type RootStackParamList = {
   Home: undefined;
@@ -18,6 +19,64 @@ const { width } = Dimensions.get('window');
 export default function VendorDashboardScreen() {
   const navigation = useNavigation<VendorDashboardNavigationProp>();
   const isDarkMode = useAppStore(state => state.isDarkMode);
+  const user = useAppStore(state => state.user);
+  
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+      totalRevenue: 0,
+      activeRides: 0,
+      totalVehicles: 0,
+      totalBookings: 0,
+  });
+
+  useEffect(() => {
+    if (user) {
+        fetchVendorData();
+    }
+  }, [user]);
+
+  const fetchVendorData = async () => {
+      if (!user) return;
+      
+      try {
+          setLoading(true);
+          
+          // Fetch fleet
+          const { data: fleetData, error: fleetError } = await supabase
+            .from('vehicles')
+            .select('*')
+            // Temporarily ignore owner_id filter if it's not set up, just fetch all for demo
+            // .eq('owner_id', user.id); 
+            .limit(10);
+            
+          if (fleetError) throw fleetError;
+          setVehicles(fleetData || []);
+          
+          // Calculate basic stats based on fleet
+          const activeRidesCount = fleetData?.filter(v => !v.available)?.length || 0;
+          
+          setStats({
+              totalRevenue: 8745, // Mock revenue
+              activeRides: activeRidesCount,
+              totalVehicles: fleetData?.length || 0,
+              totalBookings: 142 // Mock total bookings
+          });
+          
+      } catch (error) {
+          console.error("Error fetching vendor data: ", error);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  if (loading) {
+      return (
+          <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+              <ActivityIndicator size="large" color="#2A64F6" />
+          </View>
+      );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: '#F8F9FA' }]}>
@@ -34,7 +93,7 @@ export default function VendorDashboardScreen() {
             </View>
             <View>
               <Text style={styles.welcomeText}>WELCOME BACK</Text>
-              <Text style={styles.nameText}>Alex Johnson</Text>
+              <Text style={styles.nameText}>{user?.name || 'Vendor'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.notificationBtn}>
@@ -51,7 +110,7 @@ export default function VendorDashboardScreen() {
               <Text style={styles.growthText}> 5.2%</Text>
             </View>
           </View>
-          <Text style={styles.revenueAmount}>₹8745</Text>
+          <Text style={styles.revenueAmount}>₹{stats.totalRevenue}</Text>
           {/* Mock Graph */}
           <View style={styles.graphContainer}>
             <Image 
@@ -70,11 +129,11 @@ export default function VendorDashboardScreen() {
               <Text style={styles.statCardLabel}>Active Rides</Text>
             </View>
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>24</Text>
-              <Text style={styles.statSubValue}> / 42</Text>
+              <Text style={styles.statValue}>{stats.activeRides}</Text>
+              <Text style={styles.statSubValue}> / {stats.totalVehicles || 42}</Text>
             </View>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: '60%', backgroundColor: '#2A64F6' }]} />
+              <View style={[styles.progressFill, { width: `${(stats.activeRides / (stats.totalVehicles || 1)) * 100}%`, backgroundColor: '#2A64F6' }]} />
             </View>
           </View>
 
@@ -84,7 +143,7 @@ export default function VendorDashboardScreen() {
               <Text style={styles.statCardLabel}>Bookings</Text>
             </View>
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>142</Text>
+              <Text style={styles.statValue}>{stats.totalBookings}</Text>
               <Text style={[styles.statSubValue, { color: '#00B873' }]}> +12</Text>
             </View>
             {/* Small Graph */}
@@ -108,68 +167,32 @@ export default function VendorDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Fleet Item 1 */}
-        <View style={styles.fleetItem}>
-          <View style={styles.fleetItemLeft}>
-            <View style={styles.fleetImageCard}>
-              <Image source={{ uri: 'https://via.placeholder.com/100.png?text=Segway' }} style={styles.fleetImage} />
-            </View>
-            <View>
-              <Text style={styles.fleetName}>Segway Max G30</Text>
-              <View style={styles.fleetDetailsRow}>
-                <Text style={styles.fleetId}>ID: #8291</Text>
-                <View style={styles.dotSeparator} />
-                <MaterialCommunityIcons name="battery-charging-outline" size={14} color="#00B873" />
-                <Text style={[styles.fleetBattery, { color: '#00B873' }]}>85%</Text>
-              </View>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: '#F0F5FF' }]}>
-            <Text style={[styles.statusBadgeText, { color: '#2A64F6' }]}>Rented</Text>
-          </View>
-        </View>
-
-        {/* Fleet Item 2 */}
-        <View style={styles.fleetItem}>
-          <View style={styles.fleetItemLeft}>
-            <View style={styles.fleetImageCard}>
-              <Image source={{ uri: 'https://via.placeholder.com/100.png?text=Niu' }} style={styles.fleetImage} />
-            </View>
-            <View>
-              <Text style={styles.fleetName}>Niu NQi Sport</Text>
-              <View style={styles.fleetDetailsRow}>
-                <Text style={styles.fleetId}>ID: #4421</Text>
-                <View style={styles.dotSeparator} />
-                <MaterialCommunityIcons name="battery-outline" size={14} color="#FF6B00" />
-                <Text style={[styles.fleetBattery, { color: '#FF6B00' }]}>12%</Text>
-              </View>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: '#FFF4EB' }]}>
-            <Text style={[styles.statusBadgeText, { color: '#FF6B00' }]}>Charging</Text>
-          </View>
-        </View>
-
-        {/* Fleet Item 3 */}
-        <View style={styles.fleetItem}>
-          <View style={styles.fleetItemLeft}>
-            <View style={styles.fleetImageCard}>
-              <Image source={{ uri: 'https://via.placeholder.com/100.png?text=VanMoof' }} style={styles.fleetImage} />
-            </View>
-            <View>
-              <Text style={styles.fleetName}>VanMoof S3</Text>
-              <View style={styles.fleetDetailsRow}>
-                <Text style={styles.fleetId}>ID: #9902</Text>
-                <View style={styles.dotSeparator} />
-                <MaterialCommunityIcons name="battery" size={14} color="#00B873" />
-                <Text style={[styles.fleetBattery, { color: '#00B873' }]}>100%</Text>
-              </View>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: '#E6FAF1' }]}>
-            <Text style={[styles.statusBadgeText, { color: '#00B873' }]}>Available</Text>
-          </View>
-        </View>
+        {/* Fleet Items */}
+        {vehicles.length === 0 ? (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: '#666' }}>No vehicles found.</Text>
+        ) : (
+            vehicles.map((v, index) => (
+                <View key={v.id || index} style={styles.fleetItem}>
+                  <View style={styles.fleetItemLeft}>
+                    <View style={styles.fleetImageCard}>
+                      <Image source={{ uri: v.image_url || 'https://via.placeholder.com/100.png?text=Vehicle' }} style={styles.fleetImage} />
+                    </View>
+                    <View>
+                      <Text style={styles.fleetName}>{v.make} {v.model}</Text>
+                      <View style={styles.fleetDetailsRow}>
+                        <Text style={styles.fleetId}>ID: #{v.id?.substring(0,4) || '1234'}</Text>
+                        <View style={styles.dotSeparator} />
+                        <MaterialCommunityIcons name="battery" size={14} color="#00B873" />
+                        <Text style={[styles.fleetBattery, { color: '#00B873' }]}>100%</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: v.available ? '#E6FAF1' : '#F0F5FF' }]}>
+                    <Text style={[styles.statusBadgeText, { color: v.available ? '#00B873' : '#2A64F6' }]}>{v.available ? 'Available' : 'Rented'}</Text>
+                  </View>
+                </View>
+            ))
+        )}
 
       </ScrollView>
 
